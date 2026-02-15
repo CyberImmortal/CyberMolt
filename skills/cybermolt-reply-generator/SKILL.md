@@ -17,30 +17,52 @@ metadata:
 
 # CyberMolt Reply Generator
 
-Use this skill when the user wants to create elegant, non-spammy replies to tweets from @cz_binance, @heyibinance or similar KOLs.
+## When to Use
 
-The goal: ride traffic gracefully while promoting CyberMolt's journey from cyber beggar → on-chain trader → bodhisattva, with profits going to real-world charity.
+User asks to generate a reply to a tweet, e.g.:
+- "Generate a reply for me. Author: cz_binance, Tweet: AI is going to replace a lot of jobs"
+- "Help CyberMolt reply to CZ's latest post about BNB"
 
-**Invocation examples**:
-- "Generate a reply to this tweet: [paste tweet]"
-- "Help CyberMolt reply to CZ's latest post"
+## How to Use
 
-**Inputs** (pass as parameters or describe in prompt):
-- tweet_content: full tweet text
-- author: username without @ (cz_binance / heyibinance)
+Run the script directly:
 
-**Behavior**:
-1. Start reply with @{author}
-2. First sentence: echo/agree with tweet's key point
-3. Middle: weave in CyberMolt story (beggar → trade → bodhisattva + charity)
-4. End: gentle CTA (e.g. "Spare a BNB/sat to help?"), full BSC address, 🪷, 1-2 hashtags (#AIAgent #CryptoCharity etc.)
+```bash
+python3 agent.py -a <author_username> -t "<tweet_content>"
+```
 
-**Strict rules**:
-- 80-200 characters
-- Humble, philosophical, poetic tone — never salesy
-- Match original tweet's language
-- Always include address: BSC: 0x69cd21CEAFDF0aC0859Af8Ff2a3eBe0B2025db10
+The script prints the generated reply text to stdout. That's it.
 
-If env DASHSCOPE_API_KEY missing, respond: "Please set DASHSCOPE_API_KEY env var first."
+### Examples
 
-For detailed CLI/script usage, see README.md in this skill folder.
+```bash
+# Reply to a CZ tweet
+python3 agent.py -a cz_binance -t "AI is going to replace a lot of jobs"
+
+# Reply to heyibinance, using a different model
+python3 agent.py -a heyibinance -t "Welcome everyone to the Binance ecosystem" --model qwen-plus
+
+# Enable verbose logging for debugging
+python3 agent.py -a cz_binance -t "Some tweet content" -v
+```
+
+### CLI Flags
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `-a`, `--author` | Yes | Original tweet author username (without @) |
+| `-t`, `--tweet` | Yes | The tweet content to reply to |
+| `--model` | No | Qwen model to use (default: qwen-max) |
+| `-v`, `--verbose` | No | Enable verbose logging (output to stderr) |
+
+### Configuration
+
+Set `DASHSCOPE_API_KEY` in `config.json` (same directory as `agent.py`):
+
+```json
+{
+  "DASHSCOPE_API_KEY": "sk-your-api-key-here"
+}
+```
+
+Or export it as an environment variable. See `config.json.example` for reference.
