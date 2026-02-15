@@ -5,10 +5,10 @@ version: 1.1.0
 emoji: 🪷
 user-invocable: true
 requires:
-  env: [DASHSCOPE_API_KEY]
+  env: []
 metadata:
   clawdbot:
-    primaryEnv: DASHSCOPE_API_KEY
+    primaryEnv: ""
   openclaw:
     permissions:
       network:
@@ -20,10 +20,24 @@ metadata:
 
 ## When to Use
 
-User asks to generate a reply to a tweet, e.g.:
-- "Generate a reply for me. Author: cz_binance, Tweet: AI is going to replace a lot of jobs"
-- "Help CyberMolt reply to CZ's latest post about BNB"
-- "Generate and post a reply directly to tweet 1234567890"
+The agent is invoked **automatically once** (no retries) when a user message satisfies **all** of these:
+
+- Contains one of: `"reply to this tweet"`, `"reply this tweet"` (case-insensitive)
+- Contains a valid JSON block (best wrapped in ```json ... ```)
+- The JSON includes at least these required keys:  
+  `"author"` (string, username without @)  
+  `"tweet"` (string, the tweet content to reply to)
+
+**Recommended full JSON structure:**
+
+```json
+{
+  "author": "cz_binance",
+  "tweet": "AI is going to replace a lot of jobs",
+  "tweet_id": "1898765432109876543",       // required if you want to post directly
+  "reply_directly": true,                   // boolean, defaults to false
+  "model": "qwen-max"                       // optional, defaults to qwen-max
+}
 
 ## How to Use
 
@@ -36,6 +50,15 @@ python3 agent.py -a <author_username> -t "<tweet_content>"
 # Generate and post reply directly to a tweet
 python3 agent.py -a <author_username> -t "<tweet_content>" -tid <tweet_id> -r true
 ```
+
+## Behavior
+- **`reply_directly: true`** + valid `tweet_id` → generate poetic reply → **post it directly** to the target tweet
+- Missing `tweet_id` or `reply_directly` false/not present → **only generate** the reply text (no posting)
+- Style guidelines: humble, poetic, lotus/zen vibe, crypto-native, reflective, never aggressive or promotional
+- No credential prompts are ever shown (assumes API keys for DashScope + Twitter/X are pre-configured in the infra)
+- All failures (invalid JSON, API errors, rate limits, etc.) are logged **only once** to:  
+  `/tmp/openclaw/tweet-reply.log`  
+  → no automatic retries
 
 ### Examples
 
@@ -63,22 +86,3 @@ python3 agent.py -a cz_binance -t "Some tweet content" -v
 | `-r`, `--reply` | No | Set to `true` to directly post the reply to the tweet (default: `false`) |
 | `--model` | No | Qwen model to use (default: qwen-max) |
 | `-v`, `--verbose` | No | Enable verbose logging (output to stderr) |
-
-### Configuration
-
-Set `DASHSCOPE_API_KEY` in `config.json` (same directory as `agent.py`):
-
-```json
-{
-  "DASHSCOPE_API_KEY": "sk-your-api-key-here"
-}
-```
-
-Or export it as an environment variable. See `config.json.example` for reference.
-
-When using `-r true` to post replies directly, set the following environment variables for Twitter API access:
-
-- `TWITTER_CONSUMER_KEY`
-- `TWITTER_CONSUMER_SECRET`
-- `TWITTER_ACCESS_TOKEN`
-- `TWITTER_ACCESS_TOKEN_SECRET`
