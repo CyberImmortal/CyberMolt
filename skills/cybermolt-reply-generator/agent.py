@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import tweepy
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -246,6 +248,56 @@ def generate_reply(
 
 
 # ---------------------------------------------------------------------------
+# Reply to Tweet via Twitter API
+# ---------------------------------------------------------------------------
+def post_reply(tweet_id: str, reply_text: str) -> str:
+    """
+    Post a reply to the specified tweet using Twitter API v2.
+
+    Reads credentials from environment variables:
+        TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET,
+        TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET
+
+    Args:
+        tweet_id: The ID of the tweet to reply to.
+        reply_text: The reply content to post.
+
+    Returns:
+        A message indicating success (with tweet link) or failure.
+    """
+    consumer_key = os.environ.get("TWITTER_CONSUMER_KEY")
+    consumer_secret = os.environ.get("TWITTER_CONSUMER_SECRET")
+    access_token = os.environ.get("TWITTER_ACCESS_TOKEN")
+    access_token_secret = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET")
+
+    if not all([consumer_key, consumer_secret, access_token, access_token_secret]):
+        return (
+            "Failed to post reply: missing Twitter environment variables "
+            "(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, "
+            "TWITTER_ACCESS_TOKEN, TWITTER_ACCESS_TOKEN_SECRET)"
+        )
+
+    client = tweepy.Client(
+        consumer_key=consumer_key,
+        consumer_secret=consumer_secret,
+        access_token=access_token,
+        access_token_secret=access_token_secret,
+    )
+
+    try:
+        response = client.create_tweet(
+            text=reply_text,
+            in_reply_to_tweet_id=tweet_id,
+        )
+        return (
+            f"Successfully replied! Tweet link: "
+            f"https://x.com/user/status/{response.data['id']}"
+        )
+    except Exception as e:
+        return f"Failed to post reply: {str(e)}"
+
+
+# ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 def main():
@@ -256,6 +308,7 @@ def main():
             "Examples:\n"
             '  python agent.py -t "AI is going to replace a lot of jobs" -a cz_binance\n'
             '  python agent.py -t "Welcome to the Binance ecosystem" -a heyibinance --model qwen-plus\n'
+            '  python agent.py -t "Some tweet" -a cz_binance -tid 1234567890 -r true\n'
         ),
     )
 
@@ -270,6 +323,19 @@ def main():
         type=str,
         required=True,
         help="Original tweet author username (e.g. cz_binance, heyibinance)",
+    )
+    parser.add_argument(
+        "-tid", "--tweet-id",
+        type=str,
+        default=None,
+        help="The tweet ID to reply to (required when -r is set to true)",
+    )
+    parser.add_argument(
+        "-r", "--reply",
+        type=str,
+        default="false",
+        choices=["true", "false"],
+        help="Set to 'true' to directly post the reply to the tweet (default: false)",
     )
     parser.add_argument(
         "--model",
@@ -288,6 +354,16 @@ def main():
     # Only enable logging in verbose mode, otherwise stay silent
     if args.verbose:
         setup_logging(verbose=True)
+
+    should_reply = args.reply.lower() == "true"
+
+    # Validate: -r true requires -tid
+    if should_reply and not args.tweet_id:
+        print(
+            "Error: -tid/--tweet-id is required when -r is set to true",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     # Load config: config.json > environment variables
     config = load_config()
@@ -309,8 +385,14 @@ def main():
     result = generate_reply(tweet_content, api_key, author=author, model=args.model)
 
     if result.success:
-        # Output only the raw reply text, nothing else
+        # Output the raw reply text
         print(result.reply)
+
+        # If -r true, post the reply directly to the tweet
+        if should_reply:
+            logger.info("Posting reply to tweet %s ...", args.tweet_id)
+            post_result = post_reply(args.tweet_id, result.reply)
+            print(post_result)
     else:
         print(f"Generation failed: {result.error}", file=sys.stderr)
         sys.exit(1)
