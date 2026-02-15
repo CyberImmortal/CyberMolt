@@ -1,0 +1,10 @@
+# Sensitive config (contains API keys)
+config.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
