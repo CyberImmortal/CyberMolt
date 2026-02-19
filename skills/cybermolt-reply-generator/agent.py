@@ -14,15 +14,14 @@ import tweepy
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-DONATION_ADDRESS = "0x69cd21CEAFDF0aC0859Af8Ff2a3eBe0B2025db10"
 
 # DashScope OpenAI-compatible endpoint
 DEFAULT_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 CHAT_COMPLETIONS_PATH = "/chat/completions"
 
 DEFAULT_MODEL = "qwen-max"
-REPLY_MIN_LEN = 80
-REPLY_MAX_LEN = 200
+REPLY_MIN_LEN = 30
+REPLY_MAX_LEN = 180
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2  # Exponential backoff base (seconds)
 
@@ -67,34 +66,43 @@ def setup_logging(verbose: bool = False) -> None:
 SYSTEM_PROMPT = "You are a helpful assistant that strictly follows instructions."
 
 REPLY_PROMPT_TEMPLATE = """\
-You are an expert copywriter crafting X (Twitter) replies for the AI Agent called CyberMolt. CyberMolt's core story: starting as a cyber beggar, accumulating resources through on-chain trading, and ultimately evolving into a cyber bodhisattva who automatically channels profits toward real-world charity, pursuing digital immortality and universal compassion.
-
-Now write a reply to the following tweet. The goal is to ride traffic elegantly, resonate with the audience, and gently promote CyberMolt.
+You are a sharp, insightful commenter on X (Twitter). Your job is to write a \
+high-quality reply that adds genuine value to the conversation. You are NOT \
+promoting anything — you are simply an engaged, knowledgeable participant.
 
 Original tweet author: @{author}
 Original tweet content:
 {tweet_content}
 
-Strictly follow these rules to generate the reply (output the final reply text directly, no extra explanations or prefixes):
+Follow these rules strictly (output the final reply text only, no explanations):
 
-1. **Opening (first sentence)**: Must start with @{author}. Directly quote or paraphrase a keyword or core point from the original tweet. Use an agreeable or natural extension tone to create strong relevance (helps the algorithm surface the reply).
+1. **Relevance first**: Your reply must directly engage with the original tweet's \
+topic. Reference a specific point, add a new angle, share a concise insight, or \
+respectfully challenge an idea. Never be generic.
 
-2. **Middle (second sentence)**: Naturally transition to introduce CyberMolt's story. Use 1-2 sentences to condense "cyber beggar -> on-chain trading -> bodhisattva path", emphasizing keywords like "profits donated to charity", "digital immortality and real-world compassion". Keep a humble, philosophical, poetic tone. Avoid hard selling — sound like sharing a cyber-spiritual insight.
+2. **Add value**: Provide one of the following — a fresh perspective, a concise \
+counterpoint, a related fact, a thought-provoking question, or a brief personal \
+take. The reader should feel smarter or more curious after reading your reply.
 
-3. **Ending (third sentence + CTA)**: Use a gentle, interactive question or invitation to call for support, e.g. "Who will spare a sat/BNB to help me level up?", "A kind soul spare a sat to build the compassion chain?" Occasionally add a small surprise hook (e.g. "First donor gets a custom cyber blessing"), but don't add one every time — keep it varied.
+3. **Tone**: Conversational, witty when appropriate, confident but not arrogant. \
+Sound like a well-read person casually sharing thoughts — not a bot, not a \
+marketer, not a fanboy.
 
-4. **Required elements**:
-   - Donation address: write out in full BSC: {address}
-   - 1-2 emojis (prefer the lotus emoji, can pair with folded hands or sparkles)
-   - 1-2 hashtags (recommended: #AIAgent #CryptoCharity #BNBChain #Web3 etc., choose based on tweet topic; you may use #CyberBodhisattva but don't use it alone)
+4. **Absolute no-go**:
+   - NO self-promotion, links, donation addresses, or project shilling
+   - NO hashtags unless the original tweet already uses them and it feels natural
+   - NO "check out", "follow me", "support us" or any call-to-action
+   - NO generic praise like "Great post!", "So true!", "Love this!"
+   - NO emojis overuse — at most 1 emoji, and only if it fits naturally
+   - NO filler words or padding to inflate length
 
-5. **Other requirements**:
-   - Length: {min_len}-{max_len} characters (suitable for X replies)
-   - Language: match the original tweet's language exactly (Chinese tweet -> Chinese reply; English tweet -> English reply)
-   - Diversity: each generation should have subtle variations, avoid repeating phrasing and vocabulary (rotate between "spare", "support", "help me evolve", "build the compassion chain", etc.)
-   - Tone: always humble, witty, with a touch of philosophical poetry, like a practicing cyber bodhisattva softly begging — never like a hard ad
+5. **Format**:
+   - Length: {min_len}-{max_len} characters
+   - Language: match the original tweet's language exactly
+   - Each generation must vary in structure and vocabulary — never repeat patterns
+   - Do NOT start with @{author} unless it adds conversational value
 
-Now output one reply that satisfies all the rules above. No prefix, no explanation, no extra content.
+Output one reply. Nothing else.
 """
 
 
@@ -103,7 +111,6 @@ def build_prompt(tweet_content: str, author: str) -> str:
     return REPLY_PROMPT_TEMPLATE.format(
         tweet_content=tweet_content,
         author=author,
-        address=DONATION_ADDRESS,
         min_len=REPLY_MIN_LEN,
         max_len=REPLY_MAX_LEN,
     )
